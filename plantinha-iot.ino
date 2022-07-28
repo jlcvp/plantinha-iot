@@ -10,64 +10,58 @@
  */
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266WiFiMulti.h>
-#include <ESP8266HTTPClient.h>
-#include <WiFiClient.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_PCD8544.h>
-#include "stack.h"
+#include <cstdlib>
+#include <cstdio>
+#include <cstring>
 
-/**
- * HELPER STRUCTS
- */
-// struct Stack {
-//     int top;
-//     int size;
-//     int *array;
-// };
+/*
+..######..##..........###.....######...######..########..######.
+.##....##.##.........##.##...##....##.##....##.##.......##....##
+.##.......##........##...##..##.......##.......##.......##......
+.##.......##.......##.....##..######...######..######....######.
+.##.......##.......#########.......##.......##.##.............##
+.##....##.##.......##.....##.##....##.##....##.##.......##....##
+..######..########.##.....##..######...######..########..######.
+*/
+class Display {
+    uint8_t backlightPin;
+    Adafruit_PCD8544* display;
+    void drawNumber(int number, int x, int y, bool zeroPadding); 
+    void displayBatteryLevel(int level, char* batteryLevelString);   
+public:
+    Display();
+    Display(uint8_t clk, uint8_t din, uint8_t dc, uint8_t ce, uint8_t rst, uint8_t backlight);
+    void drawUI(int batteryLevel, char* batteryLevelString);
+    void setBacklight(bool on);
+    void setup();
+};
 
-// struct Stack* createStack(int size) {
-//     struct Stack *stack = (struct Stack*)malloc(sizeof(struct Stack));
-//     stack->top = -1;
-//     stack->size = size;
-//     stack->array = (int*)malloc(size * sizeof(int));
-//     return stack;
-// }
+class Stack
+{
+    int top;
+    int size;
+    int *array;
 
-// void push(struct Stack *stack, int value) {
-//     if (stack->top == stack->size - 1) {
-//         Serial.println("Stack is full");
-//         return;
-//     }
-//     stack->top++;
-//     stack->array[stack->top] = value;
-// }
+public:
+    Stack(int size);
+    ~Stack();
+    void push(int value);
+    int pop();
+    bool isEmpty();
+    bool isFull();
+};
 
-// int pop(struct Stack *stack) {
-//     if (stack->top == -1) {
-//         Serial.println("Stack is empty");
-//         return -1;
-//     }
-//     int value = stack->array[stack->top];
-//     stack->top--;
-//     return value;
-// }
-
-/**
- * PINS DEFINITION
- */
-#define ANALOG_PIN A0
-#define DISPLAY_CLK_PIN D0
-#define DISPLAY_DIN_PIN D1
-#define DISPLAY_DC_PIN D2
-#define DISPLAY_CE_PIN D3
-#define DISPLAY_RST_PIN D4
-#define DISPLAY_BACKLIGHT_PIN D5
-
-/**
- * GFX Sprites
- */
+/*
+..######..########..########..####.########.########..######.
+.##....##.##.....##.##.....##..##.....##....##.......##....##
+.##.......##.....##.##.....##..##.....##....##.......##......
+..######..########..########...##.....##....######....######.
+.......##.##........##...##....##.....##....##.............##
+.##....##.##........##....##...##.....##....##.......##....##
+..######..##........##.....##.####....##....########..######.
+*/
 const uint8_t batterySprite_Width = 16;
 const uint8_t batterySprite_Height = 9;
 PROGMEM const unsigned char batterySprite[] = {
@@ -97,10 +91,141 @@ PROGMEM const unsigned char lightningSprite[] = {
     0x3c, 0x38, 0x70, 0x7f, 0xfe, 0x0c, 0x18, 0x10, 0x20
 };
 
-/**
- * ENUMS
- */
-enum class MoistureState
+/*
+.########..####..######..########..##..........###....##....##
+.##.....##..##..##....##.##.....##.##.........##.##....##..##.
+.##.....##..##..##.......##.....##.##........##...##....####..
+.##.....##..##...######..########..##.......##.....##....##...
+.##.....##..##........##.##........##.......#########....##...
+.##.....##..##..##....##.##........##.......##.....##....##...
+.########..####..######..##........########.##.....##....##...
+*/
+
+Display::Display() {
+}
+
+Display::Display(uint8_t clk, uint8_t din, uint8_t dc, uint8_t ce, uint8_t rst, uint8_t backlight) {
+    display = new Adafruit_PCD8544(clk, din, dc, ce, rst);
+    backlightPin = backlight;
+}
+
+void Display::drawUI(int batteryLevel, char* batteryLevelString) {
+    display->clearDisplay();
+    displayBatteryLevel(batteryLevel, batteryLevelString);
+    
+    // get runtime
+    unsigned long runtime = millis() / 1000;
+    int hours = runtime / 3600;
+    int minutes = (runtime % 3600) / 60;
+    int seconds = runtime % 60;
+
+    // draw time
+    display->setCursor(5, 40);
+    display->printf("%02d", hours);
+    display->print(":");
+    display->printf("%02d",minutes);
+    display->print(":");
+    display->printf("%02d",seconds);
+    Serial.printf("Runtime: %d:%d:%d\n", hours, minutes, seconds);
+    display->display();
+}
+
+void Display::setBacklight(bool on) {
+    digitalWrite(backlightPin, on ? HIGH : LOW);
+}
+
+void Display::setup() {
+    display->begin();
+}
+
+void Display::drawNumber(int number, int x, int y, bool zeroPadding)
+{
+    if((number < 0) || (number > 99999999)) {
+        display->print("*ERR*");
+        return;
+    }
+
+    Stack stack = Stack(8);
+
+    do {
+        stack.push(number % 10);
+        number /= 10;
+    } while(number > 0);
+
+    while(!stack.isEmpty()) {
+        display->drawBitmap(x, y, digitSprite[stack.pop()], digit_Width, digit_Height, 1);
+        x += digit_Width + 1;
+    }
+}
+
+void Display::displayBatteryLevel(int level, char* batteryLevelString)
+{
+    display->drawBitmap(10, 10, batterySprite, batterySprite_Width, batterySprite_Height, 1);
+
+    drawNumber(level, 12, 12, false);
+    
+    display->setCursor(10, 20);
+    display->print(batteryLevelString);
+}
+
+/*
+..######..########....###.....######..##....##
+.##....##....##......##.##...##....##.##...##.
+.##..........##.....##...##..##.......##..##..
+..######.....##....##.....##.##.......#####...
+.......##....##....#########.##.......##..##..
+.##....##....##....##.....##.##....##.##...##.
+..######.....##....##.....##..######..##....##
+*/
+
+Stack::Stack(int size) {
+    top = -1;
+    this->size = size;
+    this->array = (int*)malloc(size * sizeof(int));
+}
+
+Stack::~Stack() {
+    free(array);
+}
+
+void Stack::push(int value) {
+    if (top == size - 1) {
+        Serial.println("Stack is full");
+        return;
+    }
+    top++;
+    array[top] = value;
+}
+
+int Stack::pop() {
+    if (top == -1) {
+        Serial.println("Stack is empty");
+        return -1;
+    }
+    int value = array[top];
+    top--;
+    return value;
+}
+
+bool Stack::isEmpty() {
+    return top == -1;
+}
+
+bool Stack::isFull() {
+    return top == size - 1;
+}
+
+/*
+.########.##....##.##.....##.##.....##..######.
+.##.......###...##.##.....##.###...###.##....##
+.##.......####..##.##.....##.####.####.##......
+.######...##.##.##.##.....##.##.###.##..######.
+.##.......##..####.##.....##.##.....##.......##
+.##.......##...###.##.....##.##.....##.##....##
+.########.##....##..#######..##.....##..######.
+*/
+
+enum MoistureState
 {
     Dry,
     Humid,
@@ -114,13 +239,59 @@ enum AnalogInput
     BatteryLevel = HIGH
 };
 
-/** 
- * VARIABLES
+/*
+.########..########.########.####.##....##.########..######.
+.##.....##.##.......##........##..###...##.##.......##....##
+.##.....##.##.......##........##..####..##.##.......##......
+.##.....##.######...######....##..##.##.##.######....######.
+.##.....##.##.......##........##..##..####.##.............##
+.##.....##.##.......##........##..##...###.##.......##....##
+.########..########.##.......####.##....##.########..######.
+*/
+
+/**
+ * Pins setup
  */
-unsigned char activeAnalogInput = AnalogInput::BatteryLevel;
+#define ANALOG_PIN A0
+#define ANALOG_SELECTOR_PIN D6
 
-Adafruit_PCD8544 display = Adafruit_PCD8544(DISPLAY_CLK_PIN, DISPLAY_DIN_PIN, DISPLAY_DC_PIN, DISPLAY_CE_PIN, DISPLAY_RST_PIN);
+#define DISPLAY_CLK_PIN D0
+#define DISPLAY_DIN_PIN D1
+#define DISPLAY_DC_PIN D2
+#define DISPLAY_CE_PIN D3
+#define DISPLAY_RST_PIN D4
+#define DISPLAY_BACKLIGHT_PIN D5
 
+// General defines
+#define BATTERY_HISTORY_SIZE 50
+
+/*
+..######...##........#######..########.....###....##..........##.....##....###....########...######.
+.##....##..##.......##.....##.##.....##...##.##...##..........##.....##...##.##...##.....##.##....##
+.##........##.......##.....##.##.....##..##...##..##..........##.....##..##...##..##.....##.##......
+.##...####.##.......##.....##.########..##.....##.##..........##.....##.##.....##.########...######.
+.##....##..##.......##.....##.##.....##.#########.##...........##...##..#########.##...##.........##
+.##....##..##.......##.....##.##.....##.##.....##.##............##.##...##.....##.##....##..##....##
+..######...########..#######..########..##.....##.########.......###....##.....##.##.....##..######.
+*/
+uint8_t activeAnalogInput = AnalogInput::BatteryLevel;
+uint8_t batteryLevel = 0;
+uint8_t batteryLevelInputHistory[50];
+uint8_t currentHistoryIndex = 0;
+bool shouldUpdateDisplay = false;
+char batteryLevelString[10];
+
+Display display(DISPLAY_CLK_PIN, DISPLAY_DIN_PIN, DISPLAY_DC_PIN, DISPLAY_CE_PIN, DISPLAY_RST_PIN, DISPLAY_BACKLIGHT_PIN);
+
+/*
+.########.##.....##.##....##..######..########.####..#######..##....##..######.
+.##.......##.....##.###...##.##....##....##.....##..##.....##.###...##.##....##
+.##.......##.....##.####..##.##..........##.....##..##.....##.####..##.##......
+.######...##.....##.##.##.##.##..........##.....##..##.....##.##.##.##..######.
+.##.......##.....##.##..####.##..........##.....##..##.....##.##..####.......##
+.##.......##.....##.##...###.##....##....##.....##..##.....##.##...###.##....##
+.##........#######..##....##..######.....##....####..#######..##....##..######.
+*/
 int readAnalogPin()
 {
     return analogRead(ANALOG_PIN);
@@ -129,9 +300,10 @@ int readAnalogPin()
 int getBatteryLevel()
 {
     activeAnalogInput = AnalogInput::BatteryLevel;
-    delay(25); // delay for 25ms to allow the ADC to settle
+    delay(50); // delay for 50ms to allow the ADC to settle
     int voltage = map(analogRead(ANALOG_PIN), 0.0, 1023, 0, 4200);
     Serial.printf("Battery Level: %.2fV\n", voltage / 1000.0);
+    sprintf(batteryLevelString, "%.2fV", voltage / 1000.0);
     Serial.flush();
     int level = map(voltage, 2700, 4200, 0, 100); // operationally, the battery voltage is between 2.7 and 4.2 V
     Serial.printf("Battery Level: %d%%\n", level);
@@ -141,7 +313,7 @@ int getBatteryLevel()
 MoistureState getMoistureLevel()
 {
     activeAnalogInput = AnalogInput::Moisture;
-    delay(25); // delay for 25ms to allow the ADC to settle
+    delay(50); // delay for 50ms to allow the ADC to settle
     int value = map(analogRead(ANALOG_PIN), 0.0, 1023, 0, 100);
 
     if (value < 20)
@@ -162,69 +334,64 @@ MoistureState getMoistureLevel()
     }
 }
 
-/**
- * DISPLAY FUNCTIONS
- */
-void drawNumber(int number, int x, int y, bool zeroPadding)
+void updateBatteryLevel()
 {
-    if((number < 0) || (number > 99999999)) {
-        display.print("*ERR*");
-        return;
+    batteryLevelInputHistory[currentHistoryIndex] = getBatteryLevel();
+    currentHistoryIndex = (currentHistoryIndex + 1) % BATTERY_HISTORY_SIZE;
+
+    //get the average of the last 50 readings
+    int sum = 0;
+    for (int i = 0; i < BATTERY_HISTORY_SIZE; i++)
+    {
+        sum += batteryLevelInputHistory[i];
     }
-
-    Stack stack = Stack(8);
-
-    while(number > 0) {
-        stack.push(number % 10);
-        number /= 10;
-    }
-
-    while(!stack.isEmpty()) {
-        display.drawBitmap(x, y, digitSprite[stack.pop()], digit_Width, digit_Height, 1);
-        x += digit_Width + 1;
+    int average = sum / BATTERY_HISTORY_SIZE;
+    if (batteryLevel != average)
+    {
+        batteryLevel = average;
+        shouldUpdateDisplay = true;
     }
 }
 
-void displayBatteryLevel(int level)
-{
-    display.clearDisplay();
-    display.drawBitmap(10, 10, batterySprite, batterySprite_Width, batterySprite_Height, 1);
-
-    drawNumber(level, 12, 12, false);
-    
-    display.display();
-}
-
-
-void setupPins()
+/*
+..######..########.########.##.....##.########.
+.##....##.##..........##....##.....##.##.....##
+.##.......##..........##....##.....##.##.....##
+..######..######......##....##.....##.########.
+.......##.##..........##....##.....##.##.......
+.##....##.##..........##....##.....##.##.......
+..######..########....##.....#######..##.......
+*/
+void setupGeneralPins()
 {
     pinMode(ANALOG_PIN, INPUT);
+    pinMode(ANALOG_SELECTOR_PIN, OUTPUT);
+}
+
+void setupDisplay() {
     pinMode(DISPLAY_CLK_PIN, OUTPUT);
     pinMode(DISPLAY_DIN_PIN, OUTPUT);
     pinMode(DISPLAY_DC_PIN, OUTPUT);
     pinMode(DISPLAY_CE_PIN, OUTPUT);
     pinMode(DISPLAY_RST_PIN, OUTPUT);
     pinMode(DISPLAY_BACKLIGHT_PIN, OUTPUT);
-}
-
-void setupDisplay() {
-    display.begin();
-
+    display.setup();
 }
 
 void setup()
 {
     Serial.begin(9600);
-    setupPins();
-    setupDisplay(); // display.ino
+    setupGeneralPins();
+    setupDisplay();
 }    
 
 void loop()
 {
+
     int batteryLevel = getBatteryLevel();
     if(batteryLevel < 0) {
         batteryLevel = 0;
     }
-    displayBatteryLevel(batteryLevel);
-    delay(500);
+    display.drawUI(batteryLevel, batteryLevelString);
+    delay(1000);
 }
