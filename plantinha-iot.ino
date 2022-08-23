@@ -16,14 +16,35 @@
 #include <cstdio>
 #include <cstring>
 
+extern uint8_t batteryLevel;
+extern char batteryLevelString[10];
+
 /*
-..######..##..........###.....######...######..########..######.
-.##....##.##.........##.##...##....##.##....##.##.......##....##
-.##.......##........##...##..##.......##.......##.......##......
-.##.......##.......##.....##..######...######..######....######.
-.##.......##.......#########.......##.......##.##.............##
-.##....##.##.......##.....##.##....##.##....##.##.......##....##
-..######..########.##.....##..######...######..########..######.
+
+
+   ____   ___
+  6MMMMb/ `MM
+ 8P    YM  MM
+6M      Y  MM    ___     ____     ____     ____     ____
+MM         MM  6MMMMb   6MMMMb\  6MMMMb\  6MMMMb   6MMMMb\
+MM         MM 8M'  `Mb MM'    ` MM'    ` 6M'  `Mb MM'    `
+MM         MM     ,oMM YM.      YM.      MM    MM YM.
+MM         MM ,6MM9'MM  YMMMMb   YMMMMb  MMMMMMMM  YMMMMb
+YM      6  MM MM'   MM      `Mb      `Mb MM            `Mb
+ 8b    d9  MM MM.  ,MM L    ,MM L    ,MM YM    d9 L    ,MM
+  YMMMM9  _MM_`YMMM9'YbMYMMMM9  MYMMMM9   YMMMM9  MYMMMM9
+
+
+
+*/
+
+/*
+oooo                                    oooo
+ 888ooooo   ooooooooo8  ooooooo    ooooo888  ooooooooo8 oo oooooo    oooooooo8
+ 888   888 888oooooo8   ooooo888 888    888 888oooooo8   888    888 888ooooooo
+ 888   888 888        888    888 888    888 888          888                888
+o888o o888o  88oooo888 88ooo88 8o  88ooo888o  88oooo888 o888o       88oooooo88
+
 */
 class Display {
     uint8_t backlightPin;
@@ -33,7 +54,7 @@ class Display {
 public:
     Display();
     Display(uint8_t clk, uint8_t din, uint8_t dc, uint8_t ce, uint8_t rst, uint8_t backlight);
-    void drawUI(int batteryLevel, char* batteryLevelString);
+    void drawUI();
     void setBacklight(bool on);
     void setup();
 };
@@ -54,14 +75,14 @@ public:
 };
 
 /*
-..######..########..########..####.########.########..######.
-.##....##.##.....##.##.....##..##.....##....##.......##....##
-.##.......##.....##.##.....##..##.....##....##.......##......
-..######..########..########...##.....##....######....######.
-.......##.##........##...##....##.....##....##.............##
-.##....##.##........##....##...##.....##....##.......##....##
-..######..##........##.....##.####....##....########..######.
+ oooooooo8                       o88    o8
+888        ooooooooo  oo oooooo  oooo o888oo ooooooooo8  oooooooo8
+ 888oooooo  888    888 888    888 888  888  888oooooo8  888ooooooo
+        888 888    888 888        888  888  888                 888
+o88oooo888  888ooo88  o888o      o888o  888o  88oooo888 88oooooo88
+           o888
 */
+
 const uint8_t batterySprite_Width = 16;
 const uint8_t batterySprite_Height = 9;
 PROGMEM const unsigned char batterySprite[] = {
@@ -91,14 +112,15 @@ PROGMEM const unsigned char lightningSprite[] = {
     0x3c, 0x38, 0x70, 0x7f, 0xfe, 0x0c, 0x18, 0x10, 0x20
 };
 
+
+
 /*
-.########..####..######..########..##..........###....##....##
-.##.....##..##..##....##.##.....##.##.........##.##....##..##.
-.##.....##..##..##.......##.....##.##........##...##....####..
-.##.....##..##...######..########..##.......##.....##....##...
-.##.....##..##........##.##........##.......#########....##...
-.##.....##..##..##....##.##........##.......##.....##....##...
-.########..####..######..##........########.##.....##....##...
+ooooooooo   o88                         o888
+ 888    88o oooo   oooooooo8 ooooooooo   888   ooooooo oooo   oooo
+ 888    888  888  888ooooooo  888    888 888   ooooo888 888   888
+ 888    888  888          888 888    888 888 888    888  888 888
+o888ooo88   o888o 88oooooo88  888ooo88  o888o 88ooo88 8o   8888
+                             o888                       o8o888
 */
 
 Display::Display() {
@@ -109,7 +131,7 @@ Display::Display(uint8_t clk, uint8_t din, uint8_t dc, uint8_t ce, uint8_t rst, 
     backlightPin = backlight;
 }
 
-void Display::drawUI(int batteryLevel, char* batteryLevelString) {
+void Display::drawUI() {
     display->clearDisplay();
     displayBatteryLevel(batteryLevel, batteryLevelString);
     
@@ -167,17 +189,14 @@ void Display::displayBatteryLevel(int level, char* batteryLevelString)
     display->setCursor(10, 20);
     display->print(batteryLevelString);
 }
-
 /*
-..######..########....###.....######..##....##
-.##....##....##......##.##...##....##.##...##.
-.##..........##.....##...##..##.......##..##..
-..######.....##....##.....##.##.......#####...
-.......##....##....#########.##.......##..##..
-.##....##....##....##.....##.##....##.##...##.
-..######.....##....##.....##..######..##....##
-*/
+ oooooooo8   o8                        oooo
+888        o888oo  ooooooo    ooooooo   888  ooooo
+ 888oooooo  888    ooooo888 888     888 888o888
+        888 888  888    888 888         8888 88o
+o88oooo888   888o 88ooo88 8o  88ooo888 o888o o888o
 
+*/
 Stack::Stack(int size) {
     top = -1;
     this->size = size;
@@ -216,13 +235,14 @@ bool Stack::isFull() {
 }
 
 /*
-.########.##....##.##.....##.##.....##..######.
-.##.......###...##.##.....##.###...###.##....##
-.##.......####..##.##.....##.####.####.##......
-.######...##.##.##.##.....##.##.###.##..######.
-.##.......##..####.##.....##.##.....##.......##
-.##.......##...###.##.....##.##.....##.##....##
-.########.##....##..#######..##.....##..######.
+  ____  ___  __  ___   ___ ___  __    __     ____
+ 6MMMMb `MM 6MMb `MM    MM `MM 6MMb  6MMb   6MMMMb\
+6M'  `Mb MMM9 `Mb MM    MM  MM69 `MM69 `Mb MM'    `
+MM    MM MM'   MM MM    MM  MM'   MM'   MM YM.
+MMMMMMMM MM    MM MM    MM  MM    MM    MM  YMMMMb
+MM       MM    MM MM    MM  MM    MM    MM      `Mb
+YM    d9 MM    MM YM.   MM  MM    MM    MM L    ,MM
+ YMMMM9 _MM_  _MM_ YMMM9MM__MM_  _MM_  _MM_MYMMMM9
 */
 
 enum MoistureState
@@ -235,63 +255,125 @@ enum MoistureState
 
 enum AnalogInput
 {
-    Moisture = LOW,
-    BatteryLevel = HIGH
+    Moisture = 0x4,
+    BatteryLevel = 0x7
+};
+
+enum AppState
+{
+    Startup,
+    Sleep,
+    SensorReadings,
+    DisplayOutput
 };
 
 /*
-.########..########.########.####.##....##.########..######.
-.##.....##.##.......##........##..###...##.##.......##....##
-.##.....##.##.......##........##..####..##.##.......##......
-.##.....##.######...######....##..##.##.##.######....######.
-.##.....##.##.......##........##..##..####.##.............##
-.##.....##.##.......##........##..##...###.##.......##....##
-.########..########.##.......####.##....##.########..######.
+________              __
+`MMMMMMMb.           69M68b
+ MM    `Mb          6M' Y89
+ MM     MM   ____  _MM_____ ___  __     ____     ____
+ MM     MM  6MMMMb MMMMM`MM `MM 6MMb   6MMMMb   6MMMMb\
+ MM     MM 6M'  `Mb MM   MM  MMM9 `Mb 6M'  `Mb MM'    `
+ MM     MM MM    MM MM   MM  MM'   MM MM    MM YM.
+ MM     MM MMMMMMMM MM   MM  MM    MM MMMMMMMM  YMMMMb
+ MM     MM MM       MM   MM  MM    MM MM            `Mb
+ MM    .M9 YM    d9 MM   MM  MM    MM YM    d9 L    ,MM
+_MMMMMMM9'  YMMMM9 _MM_ _MM__MM_  _MM_ YMMMM9  MYMMMM9
 */
 
 /**
- * Pins setup
- */
+ * /*
+ * oooooooooo  o88
+ *  888    888 oooo  oo oooooo    oooooooo8
+ *  888oooo88   888   888   888  888ooooooo
+ *  888         888   888   888          888
+ * o888o       o888o o888o o888o 88oooooo88
+ * */
 #define ANALOG_PIN A0
-#define ANALOG_SELECTOR_PIN D6
+#define ANALOG_MUX_A D7
+#define ANALOG_MUX_B D8
 
-#define DISPLAY_CLK_PIN D0
 #define DISPLAY_DIN_PIN D1
 #define DISPLAY_DC_PIN D2
 #define DISPLAY_CE_PIN D3
 #define DISPLAY_RST_PIN D4
 #define DISPLAY_BACKLIGHT_PIN D5
+#define DISPLAY_CLK_PIN D6
 
-// General defines
+
+// /*
+//   ooooooo8                                                           o888
+// o888    88   ooooooooo8 oo oooooo   ooooooooo8 oo oooooo   ooooooo    888
+// 888    oooo 888oooooo8   888   888 888oooooo8   888    888 ooooo888   888
+// 888o    88  888          888   888 888          888      888    888   888
+//  888ooo888    88oooo888 o888o o888o  88oooo888 o888o      88ooo88 8o o888o
+
+// */
 #define BATTERY_HISTORY_SIZE 50
+#define MICROSSECONDS 1000000
+#define LOOPSLEEP 200
+#define MAX_WAKE_TIME_SECONDS 300
+/*
+____     ___
+`Mb(     )d'
+ YM.     ,P
+ `Mb     d'   ___   ___  __   ____
+  YM.   ,P  6MMMMb  `MM 6MM  6MMMMb\
+  `Mb   d' 8M'  `Mb  MM69 " MM'    `
+   YM. ,P      ,oMM  MM'    YM.
+   `Mb d'  ,6MM9'MM  MM      YMMMMb
+    YM,P   MM'   MM  MM          `Mb
+    `MM'   MM.  ,MM  MM     L    ,MM
+     YP    `YMMM9'Yb_MM_    MYMMMM9
+*/
 
 /*
-..######...##........#######..########.....###....##..........##.....##....###....########...######.
-.##....##..##.......##.....##.##.....##...##.##...##..........##.....##...##.##...##.....##.##....##
-.##........##.......##.....##.##.....##..##...##..##..........##.....##..##...##..##.....##.##......
-.##...####.##.......##.....##.########..##.....##.##..........##.....##.##.....##.########...######.
-.##....##..##.......##.....##.##.....##.#########.##...........##...##..#########.##...##.........##
-.##....##..##.......##.....##.##.....##.##.....##.##............##.##...##.....##.##....##..##....##
-..######...########..#######..########..##.....##.########.......###....##.....##.##.....##..######.
+  ooooooo8 o888            oooo                    o888
+o888    88  888   ooooooo   888ooooo     ooooooo    888       oooo   oooo ooooooo   oo oooooo    oooooooo8
+888    oooo 888 888     888 888    888   ooooo888   888        888   888  ooooo888   888    888 888ooooooo
+888o    88  888 888     888 888    888 888    888   888         888 888 888    888   888                888
+ 888ooo888 o888o  88ooo88  o888ooo88    88ooo88 8o o888o          888    88ooo88 8o o888o       88oooooo88
+
 */
-uint8_t activeAnalogInput = AnalogInput::BatteryLevel;
+
 uint8_t batteryLevel = 0;
-uint8_t batteryLevelInputHistory[50];
+uint8_t batteryLevelInputHistory[BATTERY_HISTORY_SIZE];
+
+MoistureState moistureLevel = MoistureState::Dry;
+
 uint8_t currentHistoryIndex = 0;
+uint64_t lastDisplayUpdate = 0;
+uint64_t lastWakeUp = 0;
 bool shouldUpdateDisplay = false;
 char batteryLevelString[10];
 
 Display display(DISPLAY_CLK_PIN, DISPLAY_DIN_PIN, DISPLAY_DC_PIN, DISPLAY_CE_PIN, DISPLAY_RST_PIN, DISPLAY_BACKLIGHT_PIN);
-
+AppState appState = AppState::Startup;
 /*
-.########.##.....##.##....##..######..########.####..#######..##....##..######.
-.##.......##.....##.###...##.##....##....##.....##..##.....##.###...##.##....##
-.##.......##.....##.####..##.##..........##.....##..##.....##.####..##.##......
-.######...##.....##.##.##.##.##..........##.....##..##.....##.##.##.##..######.
-.##.......##.....##.##..####.##..........##.....##..##.....##.##..####.......##
-.##.......##.....##.##...###.##....##....##.....##..##.....##.##...###.##....##
-.##........#######..##....##..######.....##....####..#######..##....##..######.
+________
+`MMMMMMM                                   68b
+ MM    \                             /     Y89
+ MM    ___   ___ ___  __     ____   /M     ___   _____  ___  __     ____
+ MM   ,`MM    MM `MM 6MMb   6MMMMb./MMMMM  `MM  6MMMMMb `MM 6MMb   6MMMMb\
+ MMMMMM MM    MM  MMM9 `Mb 6M'   Mb MM      MM 6M'   `Mb MMM9 `Mb MM'    `
+ MM   ` MM    MM  MM'   MM MM    `' MM      MM MM     MM MM'   MM YM.
+ MM     MM    MM  MM    MM MM       MM      MM MM     MM MM    MM  YMMMMb
+ MM     MM    MM  MM    MM MM       MM      MM MM     MM MM    MM      `Mb
+ MM     YM.   MM  MM    MM YM.   d9 YM.  ,  MM YM.   ,M9 MM    MM L    ,MM
+_MM_     YMMM9MM__MM_  _MM_ YMMMM9   YMMM9 _MM_ YMMMMM9 _MM_  _MM_MYMMMM9
+
 */
+
+void setAnalogInput(AnalogInput input) {
+    uint8_t aOut = input & 0b001;
+    uint8_t bOut = input & 0b010;
+    // uint8_t cOut = input & 0b100; // Not used atm
+    digitalWrite(ANALOG_MUX_A, aOut);
+    digitalWrite(ANALOG_MUX_B, bOut);
+
+    delay(50); // delay for 50ms to allow the ADC to settle
+}
+
 int readAnalogPin()
 {
     return analogRead(ANALOG_PIN);
@@ -299,9 +381,8 @@ int readAnalogPin()
 
 int getBatteryLevel()
 {
-    activeAnalogInput = AnalogInput::BatteryLevel;
-    delay(50); // delay for 50ms to allow the ADC to settle
-    int voltage = map(analogRead(ANALOG_PIN), 0.0, 1023, 0, 4200);
+    setAnalogInput(AnalogInput::BatteryLevel);
+    int voltage = map(readAnalogPin(), 0.0, 1023, 0, 4200);
     Serial.printf("Battery Level: %.2fV\n", voltage / 1000.0);
     sprintf(batteryLevelString, "%.2fV", voltage / 1000.0);
     Serial.flush();
@@ -312,8 +393,7 @@ int getBatteryLevel()
 
 MoistureState getMoistureLevel()
 {
-    activeAnalogInput = AnalogInput::Moisture;
-    delay(50); // delay for 50ms to allow the ADC to settle
+    setAnalogInput(AnalogInput::Moisture);
     int value = map(analogRead(ANALOG_PIN), 0.0, 1023, 0, 100);
 
     if (value < 20)
@@ -353,19 +433,44 @@ void updateBatteryLevel()
     }
 }
 
+void updateMoistureLevel()
+{
+    MoistureState moistureState = getMoistureLevel();
+    if (moistureState != moistureLevel)
+    {
+        moistureLevel = moistureState;
+        shouldUpdateDisplay = true;
+    }
+}
+
+void updateSensors()
+{
+    updateBatteryLevel();
+    updateMoistureLevel();
+}
+
 /*
-..######..########.########.##.....##.########.
-.##....##.##..........##....##.....##.##.....##
-.##.......##..........##....##.....##.##.....##
-..######..######......##....##.....##.########.
-.......##.##..........##....##.....##.##.......
-.##....##.##..........##....##.....##.##.......
-..######..########....##.....#######..##.......
+  ____
+ 6MMMMb\
+6M'    `           /
+MM         ____   /M    ___   ___ __ ____
+YM.       6MMMMb /MMMMM `MM    MM `M6MMMMb
+ YMMMMb  6M'  `Mb MM     MM    MM  MM'  `Mb
+     `Mb MM    MM MM     MM    MM  MM    MM
+      MM MMMMMMMM MM     MM    MM  MM    MM
+      MM MM       MM     MM    MM  MM    MM
+L    ,M9 YM    d9 YM.  , YM.   MM  MM.  ,M9
+MYMMMM9   YMMMM9   YMMM9  YMMM9MM_ MMYMMM9
+                                   MM
+                                   MM
+                                  _MM_
 */
+
 void setupGeneralPins()
 {
     pinMode(ANALOG_PIN, INPUT);
-    pinMode(ANALOG_SELECTOR_PIN, OUTPUT);
+    pinMode(ANALOG_MUX_A, OUTPUT);
+    pinMode(ANALOG_MUX_B, OUTPUT);
 }
 
 void setupDisplay() {
@@ -383,15 +488,58 @@ void setup()
     Serial.begin(9600);
     setupGeneralPins();
     setupDisplay();
-}    
+}
+
+/*
+___       ___                             ___
+`MMb     dMM'         68b                 `MM
+ MMM.   ,PMM          Y89                  MM
+ M`Mb   d'MM    ___   ___ ___  __          MM   _____     _____  __ ____
+ M YM. ,P MM  6MMMMb  `MM `MM 6MMb         MM  6MMMMMb   6MMMMMb `M6MMMMb
+ M `Mb d' MM 8M'  `Mb  MM  MMM9 `Mb        MM 6M'   `Mb 6M'   `Mb MM'  `Mb
+ M  YM.P  MM     ,oMM  MM  MM'   MM        MM MM     MM MM     MM MM    MM
+ M  `Mb'  MM ,6MM9'MM  MM  MM    MM        MM MM     MM MM     MM MM    MM
+ M   YP   MM MM'   MM  MM  MM    MM        MM MM     MM MM     MM MM    MM
+ M   `'   MM MM.  ,MM  MM  MM    MM        MM YM.   ,M9 YM.   ,M9 MM.  ,M9
+_M_      _MM_`YMMM9'Yb_MM__MM_  _MM_      _MM_ YMMMMM9   YMMMMM9  MMYMMM9
+                                                                  MM
+                                                                  MM
+                                                                 _MM_
+*/
 
 void loop()
 {
+    switch(appState) {
+        case AppState::Startup:
+            // initial readings and UI
+            updateSensors();
+            appState = AppState::DisplayOutput;
+        break;
+        case AppState::Sleep:
+            appState = AppState::SensorReadings;
+            ESP.deepSleep(10 * MICROSSECONDS);
+        break;
+        case AppState::SensorReadings:
+            updateSensors();
+            appState = AppState::DisplayOutput;
+        break;
+        case AppState::DisplayOutput:
+            if(shouldUpdateDisplay) {   
+                display.drawUI();
+            }
 
-    int batteryLevel = getBatteryLevel();
-    if(batteryLevel < 0) {
-        batteryLevel = 0;
+            if((millis() - lastWakeUp)/1000 > MAX_WAKE_TIME_SECONDS) {
+                appState = AppState::Sleep;
+            } else {
+                appState = AppState::SensorReadings;
+            }
+        break;
     }
-    display.drawUI(batteryLevel, batteryLevelString);
-    delay(1000);
+
+    // int batteryLevel = getBatteryLevel();
+    // if(batteryLevel < 0) {
+    //     batteryLevel = 0;
+    // }
+    // display.drawUI(batteryLevel, batteryLevelString);
+    delay(LOOPSLEEP);
 }
